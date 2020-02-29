@@ -13,6 +13,7 @@ public class ServiceClient implements Runnable {
     private Socket clientSocket;
     private BufferedReader in = null;
     final String dirs = System.getProperty("user.dir");
+    String dirF= dirs.substring(0,dirs.length()-3);
     public ServiceClient(Socket client) {
         this.clientSocket = client;
     }
@@ -37,6 +38,7 @@ public class ServiceClient implements Runnable {
                         continue;
                     case "3":
                         listFiles();
+                        continue;
                     case "4":
                         System.exit(1);
 
@@ -62,7 +64,7 @@ public class ServiceClient implements Runnable {
             String fileName = clientData.readUTF();
 
 
-            File dir=new File(dirs+"/ServerFiles/"+ fileName);
+            File dir=new File(dirF+"/ServerFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             byte[] buffer = new byte[1024];
@@ -71,8 +73,8 @@ public class ServiceClient implements Runnable {
                 size -= bytesRead;
             }
 
-           // output.close();
-            //clientData.close();
+            output.close();
+            clientData.close();
 
             System.out.println("File "+fileName+" received from client.");
         } catch (IOException ex) {
@@ -81,7 +83,7 @@ public class ServiceClient implements Runnable {
     }
     public void listFiles()
     {
-        try (Stream<Path> walk = Files.walk(Paths.get(dirs+"/ServerFiles"))) {
+        try (Stream<Path> walk = Files.walk(Paths.get(dirF+"/ServerFiles"))) {
 
             List<String> result = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
@@ -95,7 +97,7 @@ public class ServiceClient implements Runnable {
 
     public void sendFile(String fileName) {
         try {
-            File dir=new File(dirs+"/ServerFiles");
+            File dir=new File(dirF+"/ServerFiles");
             File myFile = new File(dir,fileName);  //handle file reading
             System.out.println("is dir"+dir.isDirectory());
             byte[] mybytearray = new byte[(int) myFile.length()];
