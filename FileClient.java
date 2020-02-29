@@ -8,6 +8,7 @@ public class FileClient {
     private static String fileName;
     private static BufferedReader stdin;
     private static PrintStream os;
+    final static String  dirs = System.getProperty("user.dir");
 
     public static void main(String[] args) throws IOException {
         while(true) {
@@ -61,7 +62,7 @@ public class FileClient {
             System.out.print("Enter file name: ");
             fileName = stdin.readLine();
 
-            File dir=new File("/home/amukelani/Documents/CSC3002F/ClientFiles");
+            File dir=new File(dirs+"/ClientFiles");
             File myFile = new File(dir,fileName);
             byte[] mybytearray = new byte[(int) myFile.length()];
             if(!myFile.exists()) {
@@ -98,7 +99,7 @@ public class FileClient {
             DataInputStream clientData = new DataInputStream(in);
 
             fileName = clientData.readUTF();
-            File dir=new File("/home/amukelani/Documents/CSC3002F/ClientFiles/"+ fileName);
+            File dir=new File(dirs+"/ClientFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             byte[] buffer = new byte[1024];
@@ -117,3 +118,4 @@ public class FileClient {
 
     }
 }
+
