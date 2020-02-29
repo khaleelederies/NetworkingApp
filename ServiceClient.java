@@ -12,6 +12,15 @@ public class ServiceClient implements Runnable {
 
     private Socket clientSocket;
     private BufferedReader in = null;
+    private ObjectInputStream sIn;
+    private ObjectOutputStream sOut;
+    private FileInputStream fileIn;
+    private FileOutputStream fileOut;
+    private BufferedOutputStream bos;
+    private String filename;
+    private File file;
+    private int file_size;
+    
     final String dirs = System.getProperty("user.dir"); 	//Get Current directory
     String dirF= dirs.substring(0,dirs.length()-3); 		//Get immediate directory before src folder
     
@@ -19,6 +28,7 @@ public class ServiceClient implements Runnable {
     public ServiceClient(Socket client)
     {
         this.clientSocket = client;
+
     }
 
     @Override
@@ -26,24 +36,24 @@ public class ServiceClient implements Runnable {
 
         try {
         	
-        	// Create inputStream to receive data from Client through socket
-            in = new BufferedReader(new InputStreamReader(
-                    clientSocket.getInputStream()));
-
-            String clientSelection;
+        	//Connect to host and get streams
+        	sIn = new ObjectInputStream(this.clientSocket.getInputStream());
+        	sOut = new ObjectOutputStream(this.clientSocket.getOutputStream());
+        	
+            int clientSelection = sIn.readInt();
             
             //Select protocol to use based on input recevied from client
-            while ((clientSelection = in.readLine()) != null) {
+            while (true) {
             	
                 switch (clientSelection) {
                 	
                 	//Receive file from client
-                    case "1":
+                    case 1:
                         receiveFile();
                         continue;
                         
                     //Send file to client    
-                    case "2":
+                    case 2:
                         String outGoingFileName;
                         while ((outGoingFileName = in.readLine()) != null) {
                             sendFile(outGoingFileName);
@@ -51,12 +61,12 @@ public class ServiceClient implements Runnable {
                         continue;
                         
                     //Send client a list of available files
-                    case "3":
+                    case 3:
                         listFiles();
                         continue;
                     
                     //Close connection socket with client and end thread     
-                    case "4":
+                    case 4:
                         System.exit(1);
                         break;
                         
@@ -79,28 +89,43 @@ public class ServiceClient implements Runnable {
     // Receive File from Client
     public void receiveFile() {
         try {
-            int bytesRead;
 
-            DataInputStream clientData = new DataInputStream(clientSocket.getInputStream());
+            //Receive filename from Client
+            filename = (String) sIn.readObject();
+            
+            //Receive file size from Client
+            file_size = sIn.readInt();
+            
+            //Create target for file and file output stream
+            file = new File(dirs+"/ServerFiles/"+ filename);	//Save the files received to a folder named ServerFiles
+            fileOut = new FileOutputStream(file);
+            
+            //Create buffered output
+            bos = new BufferedOutputStream(fileOut);
+            
+            byte[] buffer = null;
+            int total_read_len = 0;
+            
+            //Receving file loop
+            while( sIn.readBoolean() ){
+                buffer = (byte[]) sIn.readObject();
+                total_read_len += buffer.length;
+                bos.write(buffer);
 
-            String fileName = clientData.readUTF();
-
-
-            File dir=new File(dirF+"/ServerFiles/"+ fileName); //Save the files received to a folder named ServerFiles
-            OutputStream output = new FileOutputStream(dir);
-            long size = clientData.readLong();
-            byte[] buffer = new byte[1024];
-            while (size > 0 && (bytesRead = clientData.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-                output.write(buffer, 0, bytesRead);
-                size -= bytesRead;
+                System.out.println("Receive: " + (float)total_read_len/file_size*100 + "%");
             }
 
-            //Close Data and output stream
-            output.close();
-            clientData.close();
+            System.out.println("File "+filename+" received from client.");
 
-            System.out.println("File "+fileName+" received from client.");
-        } catch (IOException ex) {
+            bos.close();
+            fileOut.close();
+            
+            System.out.println("File contained at: " + file.toPath());
+            
+            //add code to delete file if errors occured during upload
+            
+        }
+        catch (Exception e) {
             System.err.println("Client error. Connection closed.");
         }
     }
