@@ -10,8 +10,9 @@ public class FileServer {
     public static void main(String[] args) throws IOException {
 
         try {
+            //get the server online
             serverSocket = new ServerSocket(5000);
-            System.out.println("Heyy!! Server started.");
+            System.out.println("Server started.");
         } catch (Exception e) {
             System.err.println("Port already in use.");
             System.exit(1);
@@ -22,7 +23,7 @@ public class FileServer {
             try {
                 clientSocket = serverSocket.accept();
                 System.out.println("Accepted connection : " + clientSocket);
-
+            //Create threads to handle every client connection
                 Thread t = new Thread(new ServiceClient(clientSocket));
 
                 t.start();
