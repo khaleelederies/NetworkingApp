@@ -12,11 +12,12 @@ public class ServiceClient implements Runnable {
 
     private Socket clientSocket;
     private BufferedReader in = null;
-    final String dirs = System.getProperty("user.dir"); //Get Current directory
-    String dirF= dirs.substring(0,dirs.length()-3); // get immediate directory before src folder
+    final String dirs = System.getProperty("user.dir"); 	//Get Current directory
+    String dirF= dirs.substring(0,dirs.length()-3); 		//Get immediate directory before src folder
+    
+    
     public ServiceClient(Socket client)
     {
-
         this.clientSocket = client;
     }
 
@@ -24,29 +25,42 @@ public class ServiceClient implements Runnable {
     public void run() {
 
         try {
+        	
+        	// Create inputStream to receive data from Client through socket
             in = new BufferedReader(new InputStreamReader(
                     clientSocket.getInputStream()));
-            String clientSelection;
 
-            //Handle client input/selection
+            String clientSelection;
+            
+            //Select protocol to use based on input recevied from client
             while ((clientSelection = in.readLine()) != null) {
+            	
                 switch (clientSelection) {
+                	
+                	//Receive file from client
                     case "1":
                         receiveFile();
                         continue;
+                        
+                    //Send file to client    
                     case "2":
                         String outGoingFileName;
                         while ((outGoingFileName = in.readLine()) != null) {
                             sendFile(outGoingFileName);
                         }
                         continue;
+                        
+                    //Send client a list of available files
                     case "3":
                         listFiles();
                         continue;
+                    
+                    //Close connection socket with client and end thread     
                     case "4":
                         System.exit(1);
-
                         break;
+                        
+                    
                     default:
                         System.out.println("Incorrect command received.");
                         break;
@@ -54,10 +68,14 @@ public class ServiceClient implements Runnable {
 
             }
 
-        } catch (IOException ex) {
-
         }
+        catch (IOException ex) {
+        	System.out.println(ex);
+        }
+        
     }
+    
+    
     // Receive File from Client
     public void receiveFile() {
         try {
