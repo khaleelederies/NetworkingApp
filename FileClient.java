@@ -36,6 +36,9 @@ public class FileClient {
                         receiveFile(fileName);
                         continue;
                     case 3:
+                        os.println("3");
+                    case 4:
+                        os.println("4");
                         sock.close();
                         System.exit(1);
                 }
@@ -50,7 +53,8 @@ public class FileClient {
     public static String selectAction() throws IOException {
         System.out.println("1. Send file.");
         System.out.println("2. Recieve file.");
-        System.out.println("3. Exit.");
+        System.out.println("3. View files.");
+        System.out.println("4. Exit.");
         System.out.print("\nMake selection: ");
 
         return stdin.readLine();
@@ -118,4 +122,3 @@ public class FileClient {
 
     }
 }
-
