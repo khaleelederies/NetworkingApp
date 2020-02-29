@@ -9,6 +9,8 @@ public class FileClient {
     private static BufferedReader stdin;
     private static PrintStream os;
     final static String  dirs = System.getProperty("user.dir");
+    static String dirF= dirs.substring(0,dirs.length()-3); // get immediate directory before src folder
+    
 
     public static void main(String[] args) throws IOException {
     	
@@ -94,7 +96,7 @@ public class FileClient {
             fileName = stdin.readLine();
 
             //Get file specified by user 
-            File dir=new File(dirs+"/ClientFiles");
+            File dir=new File(dirF+"/ClientFiles");
             File myFile = new File(dir,fileName);
             if(!myFile.exists()) {
                 System.out.println("File does not exist..");
@@ -137,7 +139,7 @@ public class FileClient {
             DataInputStream clientData = new DataInputStream(in);
 
             fileName = clientData.readUTF();
-            File dir=new File(dirs+"/ClientFiles/"+ fileName);
+            File dir=new File(dirF+"/ClientFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             // Split and write files in bytes/bits
