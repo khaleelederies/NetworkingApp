@@ -13,6 +13,7 @@ public class FileClient {
     public static void main(String[] args) throws IOException {
         while(true) {
             try {
+                //Attempt conneccting to the server
                 sock = new Socket("localhost", 5000);
                 stdin = new BufferedReader(new InputStreamReader(System.in));
             } catch (Exception e) {
@@ -20,7 +21,7 @@ public class FileClient {
                 System.exit(1);
             }
 
-            os = new PrintStream(sock.getOutputStream());
+            os = new PrintStream(sock.getOutputStream()); // Instantiate the outputStream
 
             try {
                 switch (Integer.parseInt(selectAction())) {
@@ -49,6 +50,7 @@ public class FileClient {
         }
 
     }
+    //Prompt the user to put in request
 
     public static String selectAction() throws IOException {
         System.out.println("1. Send file.");
@@ -60,7 +62,7 @@ public class FileClient {
         return stdin.readLine();
     }
 
-
+    //Send files to the server from the "ClientFiles" folder
     public static void sendFile() {
         try {
             System.out.print("Enter file name: ");
@@ -94,7 +96,7 @@ public class FileClient {
             System.err.println("Exceptionnnn: "+e);
         }
     }
-
+    // Method to receive files from the server save it to the ClientFiles Folder
     public static void receiveFile(String fileName) {
         try {
             int bytesRead;
@@ -106,14 +108,16 @@ public class FileClient {
             File dir=new File(dirs+"/ClientFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
+            // Split and write files in bytes/bits
             byte[] buffer = new byte[1024];
             while (size > 0 && (bytesRead = clientData.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
                 output.write(buffer, 0, bytesRead);
                 size -= bytesRead;
             }
 
-          //  output.close();
-            //in.close();
+           //Close the inputStream and output stream
+            output.close();
+            in.close();
 
             System.out.println("File "+fileName+" received from Server.");
         } catch (IOException ex) {
