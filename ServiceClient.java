@@ -1,12 +1,18 @@
 import java.net.*;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public class ServiceClient implements Runnable {
 
     private Socket clientSocket;
     private BufferedReader in = null;
-
+    final String dirs = System.getProperty("user.dir");
     public ServiceClient(Socket client) {
         this.clientSocket = client;
     }
@@ -30,8 +36,10 @@ public class ServiceClient implements Runnable {
                         }
                         continue;
                     case "3":
+                        listFiles();
+                    case "4":
                         System.exit(1);
-    
+
                         break;
                     default:
                         System.out.println("Incorrect command received.");
@@ -52,7 +60,9 @@ public class ServiceClient implements Runnable {
             DataInputStream clientData = new DataInputStream(clientSocket.getInputStream());
 
             String fileName = clientData.readUTF();
-            File dir=new File("/home/amukelani/Documents/CSC3002F/ServerFiles/"+ fileName);
+
+
+            File dir=new File(dirs+"/ServerFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             byte[] buffer = new byte[1024];
@@ -69,10 +79,23 @@ public class ServiceClient implements Runnable {
             System.err.println("Client error. Connection closed.");
         }
     }
+    public void listFiles()
+    {
+        try (Stream<Path> walk = Files.walk(Paths.get(dirs+"/ServerFiles"))) {
+
+            List<String> result = walk.filter(Files::isRegularFile)
+                    .map(x -> x.toString()).collect(Collectors.toList());
+
+            result.forEach(System.out::println);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void sendFile(String fileName) {
         try {
-            File dir=new File("/home/amukelani/Documents/CSC3002F/ServerFiles");
+            File dir=new File(dirs+"/ServerFiles");
             File myFile = new File(dir,fileName);  //handle file reading
             System.out.println("is dir"+dir.isDirectory());
             byte[] mybytearray = new byte[(int) myFile.length()];
