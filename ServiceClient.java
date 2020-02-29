@@ -12,9 +12,11 @@ public class ServiceClient implements Runnable {
 
     private Socket clientSocket;
     private BufferedReader in = null;
-    final String dirs = System.getProperty("user.dir");
-    String dirF= dirs.substring(0,dirs.length()-3);
-    public ServiceClient(Socket client) {
+    final String dirs = System.getProperty("user.dir"); //Get Current directory
+    String dirF= dirs.substring(0,dirs.length()-3); // get immediate directory before src folder
+    public ServiceClient(Socket client)
+    {
+
         this.clientSocket = client;
     }
 
@@ -25,6 +27,8 @@ public class ServiceClient implements Runnable {
             in = new BufferedReader(new InputStreamReader(
                     clientSocket.getInputStream()));
             String clientSelection;
+
+            //Handle client input/selection
             while ((clientSelection = in.readLine()) != null) {
                 switch (clientSelection) {
                     case "1":
@@ -54,7 +58,7 @@ public class ServiceClient implements Runnable {
 
         }
     }
-
+    // Receive File from Client
     public void receiveFile() {
         try {
             int bytesRead;
@@ -64,7 +68,7 @@ public class ServiceClient implements Runnable {
             String fileName = clientData.readUTF();
 
 
-            File dir=new File(dirF+"/ServerFiles/"+ fileName);
+            File dir=new File(dirF+"/ServerFiles/"+ fileName); //Save the files received to a folder named ServerFiles
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             byte[] buffer = new byte[1024];
@@ -73,6 +77,7 @@ public class ServiceClient implements Runnable {
                 size -= bytesRead;
             }
 
+            //Close Data and output stream
             output.close();
             clientData.close();
 
@@ -81,6 +86,7 @@ public class ServiceClient implements Runnable {
             System.err.println("Client error. Connection closed.");
         }
     }
+    // Query the list of files available in the server
     public void listFiles()
     {
         try (Stream<Path> walk = Files.walk(Paths.get(dirF+"/ServerFiles"))) {
@@ -94,7 +100,7 @@ public class ServiceClient implements Runnable {
             e.printStackTrace();
         }
     }
-
+    //Send Files to the client that exist in the server as requested
     public void sendFile(String fileName) {
         try {
             File dir=new File(dirF+"/ServerFiles");
