@@ -9,54 +9,76 @@ public class FileClient {
     private static BufferedReader stdin;
     private static PrintStream os;
     final static String  dirs = System.getProperty("user.dir");
-   static String dirF= dirs.substring(0,dirs.length()-3); // get immediate directory before src folder
 
     public static void main(String[] args) throws IOException {
-        while(true) {
-            try {
-                //Attempt conneccting to the server
-                sock = new Socket("localhost", 5000);
-                stdin = new BufferedReader(new InputStreamReader(System.in));
-            } catch (Exception e) {
-                System.err.println("Cannot connect to the server, try again later.");
-                System.exit(1);
-            }
-
-            os = new PrintStream(sock.getOutputStream()); // Instantiate the outputStream
-
-            try {
-                switch (Integer.parseInt(selectAction())) {
-                    case 1:
-                        os.println("1");
-                        sendFile();
-                        continue;
-                    case 2:
-                        os.println("2");
-                        System.out.print("Enter file name: ");
-                        fileName = stdin.readLine();
-                        os.println(fileName);
-                        receiveFile(fileName);
-                        continue;
-                    case 3:
-                        os.println("3");
-                    case 4:
-                        os.println("4");
-                        sock.close();
-                        System.exit(1);
-                }
-            } catch (Exception e) {
-                System.err.println("not valid input");
-            }
-
+    	
+    	try {
+            //Attempt to connect to the server
+            sock = new Socket("localhost", 5000);							//using default values for now
+            
+            //Create inputStream to receive user input from keyboard
+            stdin = new BufferedReader(new InputStreamReader(System.in));	
+            
+        }
+        catch (Exception e) {
+            System.err.println("Cannot connect to the server, try again later.");
+            System.exit(1);
+            
+        }
+        
+        // Instantiate the outputStream to receive data from socket
+        os = new PrintStream(sock.getOutputStream());
+        
+            
+	    while(true) {
+	    	
+	        try {
+	        	
+	        	//User inputs the function they wish to perform
+	        	//This sends a message to the server to notify it of which protocol to use based on function chosen
+	            switch (Integer.parseInt(selectAction())) {
+	            	
+	            	//Upload file to server
+	                case 1:
+	                    os.println("1");
+	                    sendFile();
+	                    continue;
+	                
+	                //Download file from server
+	                case 2:
+	                    os.println("2");
+	                    System.out.print("Enter file name: ");
+	                    fileName = stdin.readLine();
+	                    os.println(fileName);
+	                    receiveFile(fileName);
+	                    continue;
+	                    
+	                //Request list of available files on server
+	                case 3:
+	                    os.println("3");
+	                
+	                //Close socket connection and exit Client program
+	                case 4:
+	                    os.println("4");
+	                    sock.close();
+	                    System.exit(1);
+	                    
+	            }
+	        }
+	        catch (Exception e) {
+	            System.err.println("Invalid input.");
+	        }
+	
         }
 
     }
-    //Prompt the user to put in request
-
+    
+    //Print user option list
     public static String selectAction() throws IOException {
-        System.out.println("1. Send file.");
-        System.out.println("2. Recieve file.");
-        System.out.println("3. View files.");
+    	
+        System.out.println("1. Upload file.");
+        System.out.println("2. Download file.");
+        System.out.println("3. View list of files on server.");
         System.out.println("4. Exit.");
         System.out.print("\nMake selection: ");
 
@@ -66,36 +88,44 @@ public class FileClient {
     //Send files to the server from the "ClientFiles" folder
     public static void sendFile() {
         try {
+        	
+        	//Ask user for file to send
             System.out.print("Enter file name: ");
             fileName = stdin.readLine();
 
-            File dir=new File(dirF+"/ClientFiles");
-            System.out.println(dir);
+            //Get file specified by user 
+            File dir=new File(dirs+"/ClientFiles");
             File myFile = new File(dir,fileName);
-            byte[] mybytearray = new byte[(int) myFile.length()];
             if(!myFile.exists()) {
                 System.out.println("File does not exist..");
-                return;
+                System.exit(1);
             }
-
-            FileInputStream fis = new FileInputStream(myFile);
-            BufferedInputStream bis = new BufferedInputStream(fis);
-            //bis.read(mybytearray, 0, mybytearray.length);
-
-            DataInputStream dis = new DataInputStream(bis);
-            dis.readFully(mybytearray, 0, mybytearray.length);
-
-            OutputStream os = sock.getOutputStream();
+            
+            
+            //If file exists, turn length into a bytearray
+            byte[] mybytearray = new byte[(int) myFile.length()];
+            
 
             //Sending file name and file size to the server
-            DataOutputStream dos = new DataOutputStream(os);
+            DataOutputStream dos = new DataOutputStream(sock.getOutputStream());
             dos.writeUTF(myFile.getName());
             dos.writeLong(mybytearray.length);
             dos.write(mybytearray, 0, mybytearray.length);
             dos.flush();
+            
+            
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(myFile));
+            //bis.read(mybytearray, 0, mybytearray.length);
+
+            
+            
+            
             System.out.println("File "+fileName+" sent to Server.");
+            
+            
+            
         } catch (Exception e) {
-            System.err.println("Exceptionnnn: "+e);
+            System.err.println("Exception: "+e);
         }
     }
     // Method to receive files from the server save it to the ClientFiles Folder
@@ -107,7 +137,7 @@ public class FileClient {
             DataInputStream clientData = new DataInputStream(in);
 
             fileName = clientData.readUTF();
-            File dir=new File(dirF+"/ClientFiles/"+ fileName);
+            File dir=new File(dirs+"/ClientFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             // Split and write files in bytes/bits
