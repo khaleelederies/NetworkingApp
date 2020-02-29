@@ -9,6 +9,7 @@ public class FileClient {
     private static BufferedReader stdin;
     private static PrintStream os;
     final static String  dirs = System.getProperty("user.dir");
+   static String dirF= dirs.substring(0,dirs.length()-3); // get immediate directory before src folder
 
     public static void main(String[] args) throws IOException {
         while(true) {
@@ -68,7 +69,8 @@ public class FileClient {
             System.out.print("Enter file name: ");
             fileName = stdin.readLine();
 
-            File dir=new File(dirs+"/ClientFiles");
+            File dir=new File(dirF+"/ClientFiles");
+            System.out.println(dir);
             File myFile = new File(dir,fileName);
             byte[] mybytearray = new byte[(int) myFile.length()];
             if(!myFile.exists()) {
@@ -105,7 +107,7 @@ public class FileClient {
             DataInputStream clientData = new DataInputStream(in);
 
             fileName = clientData.readUTF();
-            File dir=new File(dirs+"/ClientFiles/"+ fileName);
+            File dir=new File(dirF+"/ClientFiles/"+ fileName);
             OutputStream output = new FileOutputStream(dir);
             long size = clientData.readLong();
             // Split and write files in bytes/bits
