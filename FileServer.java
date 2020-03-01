@@ -30,7 +30,8 @@ public class FileServer {
                 t.start();
 
             } catch (Exception e) {
-                System.err.println("Error in connection attempt.");
+                //System.err.println("Error in connection attempt.");
+            	System.out.println(e);
             }
         }
     }
