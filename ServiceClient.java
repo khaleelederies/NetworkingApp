@@ -14,15 +14,15 @@ public class ServiceClient implements Runnable {
     private BufferedReader in = null;
     private ObjectInputStream sIn;
     private ObjectOutputStream sOut;
-    private FileInputStream fileIn;
     private FileOutputStream fileOut;
+    private BufferedInputStream bis;
     private BufferedOutputStream bos;
     private String filename;
     private File file;
     private int file_size;
     
     final String dirs = System.getProperty("user.dir"); 	//Get Current directory
-    String dirF= dirs.substring(0,dirs.length()-3); 		//Get immediate directory before src folder
+    String dirF= dirs.substring(0,dirs.length()-3); 		
     
     
     public ServiceClient(Socket client)
@@ -54,10 +54,7 @@ public class ServiceClient implements Runnable {
                         
                     //Send file to client    
                     case 2:
-                        String outGoingFileName;
-                        while ((outGoingFileName = in.readLine()) != null) {
-                            sendFile(outGoingFileName);
-                        }
+                        sendFile();
                         continue;
                         
                     //Send client a list of available files
@@ -129,45 +126,99 @@ public class ServiceClient implements Runnable {
             System.err.println("Client error. Connection closed.");
         }
     }
+    
     // Query the list of files available in the server
     public void listFiles()
     {
         try (Stream<Path> walk = Files.walk(Paths.get(dirF+"/ServerFiles"))) {
-
+        	
+        	//Create list of file names of available files
             List<String> result = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
 
-            result.forEach(System.out::println);
+                       
+            //Let client know how many files there are to view
+            sOut.writeInt(result.size());
+            
+            //Loop through list, sending each file name to the client
+            for (Iterator<String> iterator = result.iterator(); iterator.hasNext();) {
+        		sOut.writeObject(iterator.next());
+        	   			
+            }
+            
+            System.out.println("File list sent to Client");
+            
+            sOut.flush();           
 
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
-    //Send Files to the client that exist in the server as requested
-    public void sendFile(String fileName) {
+    
+    //Send file requested by the client from the server
+    public void sendFile() {
+   
         try {
-            File dir=new File(dirF+"/ServerFiles");
-            File myFile = new File(dir,fileName);  //handle file reading
-            System.out.println("is dir"+dir.isDirectory());
-            byte[] mybytearray = new byte[(int) myFile.length()];
+        	
+        	//Receive filename from client of file to send from server
+        	filename = (String) sIn.readObject();
+            
 
-            FileInputStream fis = new FileInputStream(myFile);
-            BufferedInputStream bis = new BufferedInputStream(fis);
+            //Get file specified by user and check if it exists 
+            File dir=new File(dirs+"/ServerFiles");
+            File myFile = new File(dir,filename);
+            if(!myFile.exists()) {
+                System.out.println("File does not exist..");
+                System.exit(1);
+            }
+            
+            //If file exists, create input stream to read file
+            bis = new BufferedInputStream(new FileInputStream(myFile)); 
+            
+            System.out.println("Preparing file \"" + filename + "\" to be sent"); 
+            
+            //Variables used to send file in packets
+            int file_len = (int) myFile.length();
+            int buff_size = 1024;
+            int bytesRead = 0;
+            int total_read_len = 0;
+            byte[] buffer = new byte[buff_size];
+            
+            int file_len_2 = file_len;      
+            
+            //Send client the size of the file
+            sOut.writeInt(file_len);
+                        
+            //Copy the file from the host and send to client in packets using a loop
+            while( file_len_2 > 0 ){
+        	
+                if( file_len_2 < buff_size ){
+                    buffer = new byte[file_len_2];
+                    bytesRead = bis.read(buffer);
+                    
+                }
+                else{
+                    bytesRead = bis.read(buffer);
+                    
+                }
 
-            DataInputStream dis = new DataInputStream(bis);
-            dis.readFully(mybytearray, 0, mybytearray.length);
+                file_len_2 -= bytesRead;
+                total_read_len += bytesRead;
+                sOut.writeBoolean(true);
+                sOut.writeObject(buffer);
+                System.out.println("Sent: " + (float)total_read_len/file_len*100 + "%");
+            }
 
-
-            OutputStream os = clientSocket.getOutputStream();  //handle file send over socket
-
-            DataOutputStream dos = new DataOutputStream(os); //Sending file name and file size to the server
-            dos.writeUTF(myFile.getName());
-            dos.writeLong(mybytearray.length);
-            dos.write(mybytearray, 0, mybytearray.length);
-            dos.flush();
-            System.out.println("File "+fileName+" sent to client.");
-        } catch (Exception e) {
-            System.err.println("File does not exist!");
+            sOut.writeBoolean(false);
+            
+            System.out.println("File "+filename+" sent to Client.");
+            
+            sOut.flush();
         }
+        catch (Exception e) {
+            System.err.println("Exception: "+e);
+        }
+           
     }
 }
