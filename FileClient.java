@@ -10,8 +10,12 @@ public class FileClient {
     private static PrintStream os;
     private static BufferedInputStream bis;
     private static BufferedOutputStream bos;
+    private static FileOutputStream fileOut;
     private static ObjectInputStream sIn;
-    private static ObjectOutputStream sOut; 
+    private static ObjectOutputStream sOut;
+    private static String filename;
+    private static File file;
+    private static int file_size;
     
     final static String  dirs = System.getProperty("user.dir");
     
@@ -56,15 +60,14 @@ public class FileClient {
 	                //Download file from server
 	                case 2:
 	                	sOut.writeInt(currentAction);
-	                    System.out.print("Enter file name: ");
-	                    fileName = stdin.readLine();
-	                    sOut.writeObject(fileName);
-	                    receiveFile(fileName);
+	                    receiveFile();
 	                    continue;
 	                    
 	                //Request list of available files on server
 	                case 3:
 	                	sOut.writeInt(currentAction);
+	                	printFileList();
+	                	continue;
 	                
 	                //Close socket connection and exit Client program
 	                case 4:
@@ -126,9 +129,7 @@ public class FileClient {
             int total_read_len = 0;
             byte[] buffer = new byte[buff_size];
             
-            int file_len_2 = file_len;
-            
-            
+            int file_len_2 = file_len;  
             
             //Send server the size of the file
             sOut.writeInt(file_len);
@@ -167,35 +168,82 @@ public class FileClient {
         }
         
         
-        
-    }
+    }       
+    
     // Method to receive files from the server save it to the ClientFiles Folder
-    public static void receiveFile(String fileName) {
+    public static void receiveFile() {
+        
         try {
-            int bytesRead;
-            InputStream in = sock.getInputStream();
+        	
+        	//Capture name of desired file from user and send to server
+        	System.out.print("Enter file name: ");
+            filename = stdin.readLine();
+            sOut.writeObject(filename);
+            
+            //Receive file size from Client
+            file_size = sIn.readInt();
+            
+            //Create target for file and file output stream
+            file = new File(dirs+"/ClientFiles/"+ filename);	//Save the files received to a folder named ServerFiles
+            fileOut = new FileOutputStream(file);
+            
+            //Create buffered output
+            bos = new BufferedOutputStream(fileOut);
+            
+            byte[] buffer = null;
+            int total_read_len = 0;
+            
+            //Receving file loop
+            while( sIn.readBoolean() ){
+                buffer = (byte[]) sIn.readObject();
+                total_read_len += buffer.length;
+                bos.write(buffer);
 
-            DataInputStream clientData = new DataInputStream(in);
-
-            fileName = clientData.readUTF();
-            File dir=new File(dirs+"/ClientFiles/"+ fileName);
-            OutputStream output = new FileOutputStream(dir);
-            long size = clientData.readLong();
-            // Split and write files in bytes/bits
-            byte[] buffer = new byte[1024];
-            while (size > 0 && (bytesRead = clientData.read(buffer, 0, (int) Math.min(buffer.length, size))) != -1) {
-                output.write(buffer, 0, bytesRead);
-                size -= bytesRead;
+                System.out.println("Receive: " + (float)total_read_len/file_size*100 + "%");
             }
 
-           //Close the inputStream and output stream
-            output.close();
-            in.close();
+            System.out.println("File "+filename+" received from server.");
 
-            System.out.println("File "+fileName+" received from Server.");
-        } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
+            bos.close();
+            fileOut.close();
+            
+            System.out.println("File contained at: " + file.toPath());
+            
+            //add code to delete file if errors occured during upload
+            
         }
-
+        catch (Exception e) {
+            System.err.println("Client error. Connection closed.");
+        }
+        
+        
     }
+    
+    public static void printFileList() {
+    	
+    	
+    	try {
+    		
+    		//Receive the number of file names on server file list
+    		int noFiles = sIn.readInt();
+    		System.out.println("There are "+noFiles+" available files:");
+    		
+    		//For each file name received, print it to the screen
+    		for (int i = 0; i < noFiles; i++) {
+				String incFName = (String) sIn.readObject();
+    			System.out.println(i+". "+incFName);    			
+    			
+			}
+    		
+    		System.out.println("File list received.");
+    		
+    		
+		} catch (Exception e) {
+			System.out.println(e);
+		}
+    	
+    	
+    	
+    }
+    
 }
