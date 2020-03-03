@@ -23,7 +23,7 @@ public class FileServer {
             try {
                 clientSocket = serverSocket.accept();
                 System.out.println("Accepted connection : " + clientSocket);
-                
+
                 //Create threads to handle every client connection
                 Thread t = new Thread(new ServiceClient(clientSocket));
 
@@ -31,7 +31,7 @@ public class FileServer {
 
             } catch (Exception e) {
                 //System.err.println("Error in connection attempt.");
-            	System.out.println(e);
+                System.out.println(e);
             }
         }
     }
