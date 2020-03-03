@@ -20,11 +20,11 @@ public class ServiceClient implements Runnable {
     private String filename;
     private File file;
     private int file_size;
-
+    
     final String dirs = System.getProperty("user.dir"); 	//Get Current directory
-    String dirF= dirs.substring(0,dirs.length()-3);
-
-
+    String dirF= dirs.substring(0,dirs.length()-3); 		
+    
+    
     public ServiceClient(Socket client)
     {
         this.clientSocket = client;
@@ -35,190 +35,197 @@ public class ServiceClient implements Runnable {
     public void run() {
 
         try {
-
-            //Connect to host and get streams
-            sIn = new ObjectInputStream(this.clientSocket.getInputStream());
-            sOut = new ObjectOutputStream(this.clientSocket.getOutputStream());
-
-            int clientSelection;
-
-            //Select protocol to use based on input recevied from client
+        	
+        	//Connect to host and get streams
+        	sIn = new ObjectInputStream(this.clientSocket.getInputStream());
+        	sOut = new ObjectOutputStream(this.clientSocket.getOutputStream());
+        	        	
+            //Select protocol to use based on input received from client
             while (true) {
-
-                switch (clientSelection = sIn.readInt()) {
-
-                    //Receive file from client
+            	
+            	int clientSelection = sIn.readInt();
+            	
+                switch (clientSelection) {
+                	
+                	//Receive file from client
                     case 1:
                         receiveFile();
                         continue;
-
-                        //Send file to client
+                        
+                    //Send file to client    
                     case 2:
                         sendFile();
                         continue;
-
-                        //Send client a list of available files
+                        
+                    //Send client a list of available files
                     case 3:
                         listFiles();
                         continue;
-
-                        //Close connection socket with client and end thread
+                    
+                    //Close connection socket with client and end thread     
                     case 4:
                         System.exit(1);
                         break;
-
-
+                        
+                    
                     default:
-                        System.out.println("Incorrect command received.");
-                        break;
+                        //System.out.println("Incorrect command received.");
+                    	//System.out.println()
+                        continue;
                 }
 
             }
 
         }
         catch (IOException ex) {
-            System.out.println(ex);
+        	System.out.println(ex);
         }
-
+        
     }
-
-
+    
+    
     // Receive File from Client
     public void receiveFile() {
         try {
 
             //Receive filename from Client
             filename = (String) sIn.readObject();
-
+            
             //Receive file size from Client
             file_size = sIn.readInt();
-
-            //Create target for file and file output stream
-            file = new File(dirF+"/ServerFiles/"+ filename);	//Save the files received to a folder named ServerFiles
+            
+            //Create target for file and output streams
+            file = new File(dirs+"/ServerFiles/"+ filename);	//Save the files received to a folder named ServerFiles
             fileOut = new FileOutputStream(file);
-
-            //Create buffered output
             bos = new BufferedOutputStream(fileOut);
+            
+            //Receive file from Client
+            byte[] contents = new byte[10000];
 
-            byte[] buffer = null;
-            int total_read_len = 0;
-
-            //Receving file loop
-            while( sIn.readBoolean() ){
-                buffer = (byte[]) sIn.readObject();
-                total_read_len += buffer.length;
-                bos.write(buffer);
-
-                System.out.println("Receive: " + (float)total_read_len/file_size*100 + "%");
-            }
-
+            int bytesRead = 0; 
+            
+            while((bytesRead=sIn.read(contents))!=-1)
+                bos.write(contents, 0, bytesRead); 
+            
+            bos.flush();
+ 
             System.out.println("File "+filename+" received from client.");
 
-            bos.close();
-            fileOut.close();
-
             System.out.println("File contained at: " + file.toPath());
-
-            //add code to delete file if errors occured during upload
-
+                        
         }
         catch (Exception e) {
-            System.err.println("Client error. Connection closed.");
+            //System.err.println("Client error. Connection closed.");
+        	System.err.println(e);
         }
     }
-
+    
     // Query the list of files available in the server
     public void listFiles()
     {
-        try (Stream<Path> walk = Files.walk(Paths.get(dirF+"/ServerFiles"))) {
-
-            //Create list of file names of available files
+    	System.out.println("Start of listfiles method");	
+        try {
+/*
+ * 			Use this to generate new filelist files whenever files are added
+ */
+        	
+/*			Stream<Path> walk = Files.walk(Paths.get(dirs+"/ServerFiles"));
+        	
+    		System.out.println("Path stream successful");
+    		
+        	//Create list of file names of available files
             List<String> result = walk.filter(Files::isRegularFile)
                     .map(x -> x.toString()).collect(Collectors.toList());
-
-
-            //Let client know how many files there are to view
-            sOut.writeInt(result.size());
-
-            //Loop through list, sending each file name to the client
-            for (Iterator<String> iterator = result.iterator(); iterator.hasNext();) {
-                sOut.writeObject(iterator.next());
-
+                             
+*/
+        	
+        	File fileList =new File(dirs+"/ServerFiles/filelist.txt");
+        	if(fileList.exists()) {
+                System.out.println("File does not exist..");
+                System.exit(1);
             }
-
-            System.out.println("File list sent to Client");
-
-            sOut.flush();
-
+        	
+        	Scanner sf = new Scanner(fileList);
+        	
+        	//Calculate and send number of files the client is going to receive
+        	int files = 0;
+        	
+        	while (sf.hasNext()) {
+				sf.nextLine();
+				files++;
+				
+			}
+        	sf.close();
+        	sOut.writeInt(files);
+        	
+        	//Send the file names to the client
+        	sf = new Scanner(fileList);
+        	
+        	while (sf.hasNext()) {
+        		sOut.writeObject(sf.nextLine());
+			}
+        	
+        	sf.close();
+	
         }
-        catch (IOException e) {
-            e.printStackTrace();
+        catch (Exception e) {
+            System.err.println("Exception: "+e);
         }
     }
-
+    
     //Send file requested by the client from the server
     public void sendFile() {
-
+   
         try {
-
-            //Receive filename from client of file to send from server
-            filename = (String) sIn.readObject();
-
-
-            //Get file specified by user and check if it exists
-            File dir=new File(dirF+"/ServerFiles");
+        	
+        	//Receive filename from client of file to send from server
+        	filename = (String) sIn.readObject();
+            
+            //Get file specified by user and check if it exists 
+            File dir=new File(dirs+"/ServerFiles");
             File myFile = new File(dir,filename);
             if(!myFile.exists()) {
                 System.out.println("File does not exist..");
                 System.exit(1);
             }
-
+            
             //If file exists, create input stream to read file
-            bis = new BufferedInputStream(new FileInputStream(myFile));
-
-            System.out.println("Preparing file \"" + filename + "\" to be sent");
-
-            //Variables used to send file in packets
+            FileInputStream fis = new FileInputStream(myFile);
+            bis = new BufferedInputStream(fis); 
+            
+            System.out.println("Preparing file \"" + filename + "\" to be sent"); 
+            
+            //Send file size to client
             int file_len = (int) myFile.length();
-            int buff_size = 1024;
-            int bytesRead = 0;
-            int total_read_len = 0;
-            byte[] buffer = new byte[buff_size];
-
-            int file_len_2 = file_len;
-
-            //Send client the size of the file
             sOut.writeInt(file_len);
-
-            //Copy the file from the host and send to client in packets using a loop
-            while( file_len_2 > 0 ){
-
-                if( file_len_2 < buff_size ){
-                    buffer = new byte[file_len_2];
-                    bytesRead = bis.read(buffer);
-
-                }
-                else{
-                    bytesRead = bis.read(buffer);
-
-                }
-
-                file_len_2 -= bytesRead;
-                total_read_len += bytesRead;
-                sOut.writeBoolean(true);
-                sOut.writeObject(buffer);
-                System.out.println("Sent: " + (float)total_read_len/file_len*100 + "%");
-            }
-
-            sOut.writeBoolean(false);
-
-            System.out.println("File "+filename+" sent to Client.");
-
+            
+            //Send file to client
+            byte[] contents;
+            long fileLength = file_len; 
+            long current = 0;
+             
+            while(current!=fileLength){ 
+                int size = 10000;
+                if(fileLength - current >= size)
+                    current += size;    
+                else{ 
+                    size = (int)(fileLength - current); 
+                    current = fileLength;
+                } 
+                contents = new byte[size]; 
+                bis.read(contents, 0, size); 
+                sOut.write(contents);
+                System.out.print("Sending file ... "+(current*100)/fileLength+"% complete!\n");
+            }   
             sOut.flush();
+            bis.close();
+
+            System.out.println("File "+filename+" sent successfully.");
+            
         }
         catch (Exception e) {
             System.err.println("Exception: "+e);
         }
-
+           
     }
 }
